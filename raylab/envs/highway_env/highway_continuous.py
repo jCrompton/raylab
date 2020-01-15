@@ -9,14 +9,6 @@ from highway_env.vehicle.dynamics import Vehicle
 from highway_env.vehicle.control import MDPVehicle
 
 
-class MyVehicle(MDPVehicle):
-    """MDPVehicle with low-level actions."""
-
-    @override(MDPVehicle)
-    def act(self, action=None):
-        Vehicle.act(self, action)
-
-
 class HighwayContinuousEnv(HighwayEnv):
     """Subclass of HighwayEnv that takes vectors in [-1, 1]^2 as actions."""
 
@@ -27,12 +19,6 @@ class HighwayContinuousEnv(HighwayEnv):
     def __init__(self):
         super().__init__()
         self._old_lane = None
-
-    # @override(HighwayEnv)
-    # def default_config(self):
-    #     config = super().default_config()
-    #     config.update({"policy_frequency": 5})
-    #     return config
 
     @override(AbstractEnv)
     def define_spaces(self):
@@ -47,9 +33,7 @@ class HighwayContinuousEnv(HighwayEnv):
 
     @override(HighwayEnv)
     def _create_vehicles(self):
-        self.vehicle = MyVehicle(
-            self.road, [0, 0], 2 * np.pi * self.np_random.rand(), 0
-        )
+        self.vehicle = Vehicle.create_random(self.road, 0)
         self.road.vehicles.append(self.vehicle)
 
         vehicles_type = utils.class_from_path(self.config["other_vehicles_type"])
@@ -59,10 +43,26 @@ class HighwayContinuousEnv(HighwayEnv):
     @override(HighwayEnv)
     def _reward(self, _):
         idx = self._curr_lane()
-        reward_action = 0 if idx != self._old_lane else 1
+        action_reward = self.LANE_CHANGE_REWARD if idx != self._old_lane else 0
         self._old_lane = idx
-        # Hack to ignore action reward in super's method
-        return super()._reward(reward_action)
+        neighbours = self.road.network.all_side_lanes(self.vehicle.lane_index)
+        state_reward = (
+            +self.config["collision_reward"] * self.vehicle.crashed
+            + self.RIGHT_LANE_REWARD
+            * self.vehicle.lane_index[2]
+            / (len(neighbours) - 1)
+            + self.HIGH_VELOCITY_REWARD
+            * MDPVehicle.speed_to_index(self.vehicle.velocity)
+            / (MDPVehicle.SPEED_COUNT - 1)
+        )
+        return utils.remap(
+            action_reward + state_reward,
+            [
+                self.config["collision_reward"],
+                self.HIGH_VELOCITY_REWARD + self.RIGHT_LANE_REWARD,
+            ],
+            [0, 1],
+        )
 
     @override(HighwayEnv)
     def _is_terminal(self):
