@@ -1,6 +1,5 @@
 # pylint: disable=missing-docstring
 import functools
-from contextlib import nullcontext
 from math import sqrt
 
 import click
@@ -335,7 +334,10 @@ def plot_export(**args):
                 columns=lambda s: s.replace("_", " ").capitalize(), inplace=True
             )
 
-    latex_style = latexify(columns=args["latexcol"]) if args["latex"] else nullcontext()
-    with latex_style:
+    if args["latex"]:
+        with latexify(columns=args["latexcol"]):
+            plot_figures(plot_instructions)
+            plt.savefig(args["out"], facecolor=args["facecolor"])
+    else:
         plot_figures(plot_instructions)
         plt.savefig(args["out"], facecolor=args["facecolor"])
