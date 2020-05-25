@@ -1,12 +1,12 @@
 """Continuous control variant of highway-v0."""
 import numpy as np
 from gym import spaces
-from ray.rllib.utils.annotations import override
-
 from highway_env import utils
-from highway_env.envs.highway_env import AbstractEnv, HighwayEnv
-from highway_env.vehicle.dynamics import Vehicle
+from highway_env.envs.highway_env import AbstractEnv
+from highway_env.envs.highway_env import HighwayEnv
 from highway_env.vehicle.control import MDPVehicle
+from highway_env.vehicle.dynamics import Vehicle
+from ray.rllib.utils.annotations import override
 
 
 class HighwayContinuousEnv(HighwayEnv):
